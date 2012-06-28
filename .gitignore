@@ -1,0 +1,10 @@
+*.pyc
+*.txt
+*.log
+*.jpg
+
+#specific files
+scrape.py
+scrape-br.py
+hs_files_manager_based.py
+hs_files_model_based.py
