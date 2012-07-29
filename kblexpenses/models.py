@@ -3,7 +3,7 @@ from google.appengine.ext import db
 class Resident(db.Model):
     name = db.StringProperty()
     is_current_resident = db.BooleanProperty(default=True)
-    email_address = db.EmailProperty()
+    email = db.EmailProperty()
     
 class Expense(db.Model):
     paid_by = db.ReferenceProperty(Resident)
@@ -22,5 +22,5 @@ class Payment(db.Model):
     """an indication that someone has paid off a request"""
     request = db.ReferenceProperty(Request)
     amount = db.FloatProperty()
-    datetime = db.DateTimeProperty()
+    datetime = db.DateProperty()
     acknowleged = db.BooleanProperty()
