@@ -21,7 +21,7 @@ def fanout_exchange():
     channel = connection.channel()
     exchange_name = 'analytics'
     
-    # create a fanout queue
+    # create a fanout exchange
     channel.exchange_declare(exchange=exchange_name, type='fanout')
     
     # send a task
