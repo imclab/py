@@ -11,14 +11,15 @@ import sys
 
 EXCHANGE_NAME = 'process500'
 
-def main(demo=True):
+def main(full=False):
     """ bootstraps the processing by getting the list of 5000 companies and queuing them to be processed """
 
-    if demo == True:
+    if full == False: # limit the number of companies for testing the system
         companies = get_company_name_and_rank(limit=5, pages=1)
     else:
         companies = get_company_name_and_rank()
     
+    # now that we've got the full list of companies, queue them for processing
     connection = BlockingConnection(ConnectionParameters('localhost'))
     channel = connection.channel()
     channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
@@ -29,7 +30,10 @@ def main(demo=True):
         print " [x] Sent '%s'" % (company)
 
 def worker(worker_type):
-    """ a worker that pulls messages from the Rabbit MQ """
+    """ 
+        A generic worker process that pulls messages from the MQ.
+        The actual function used to process the message is set based on the worker_type.
+    """
     connection = BlockingConnection(ConnectionParameters('localhost'))
     channel = connection.channel()
     channel.exchange_declare(exchange=EXCHANGE_NAME, type='direct')
@@ -37,7 +41,7 @@ def worker(worker_type):
     channel.queue_declare(queue=worker_type)
     channel.queue_bind(exchange=EXCHANGE_NAME, queue=worker_type, routing_key=worker_type)
     
-    channel.basic_qos(prefetch_count=1) 
+    channel.basic_qos(prefetch_count=1) # don't send more than 1 msg to a worker until it's ack'd the last msg
     
     if worker_type == "url":
         callback = get_url_for_company_name
@@ -54,7 +58,8 @@ def get_company_name_and_rank(limit=100, pages=51):
     """ return a list of all the fortune 5000 fastest growing comapnies """ 
     companies = []
 
-    years = ["x"]
+    # some hacking for the weird URL params they use
+    years = ["x"] 
     for number in range(1, 51):
         years.append(str(number) + "00")
         
@@ -114,30 +119,39 @@ def get_mg_score_for_url(ch, method, properties, body):
     print " [x] Received %r" % (company_url)
     
     if company_url == None:
-        return "no url to lookup"
+        print " [-] no url to lookup"
+        company_data["mg"] = "no url to lookup"
 
-    hostname = company_url.split("://")[1] # remove the protocol from the url
-    init_url = "http://marketing.grader.com/report/init/%s" % hostname
+    else:
+        hostname = company_url.split("://")[1] # remove the protocol from the url
+        init_url = "http://marketing.grader.com/report/init/%s" % hostname
 
-    try:
-        init = requests.get(init_url)
-        response_json = json.loads(init.text)
-        report_guid = response_json["report"]["guid"]
-    except:
-        return "error initing MG report"
+        try:
+            init = requests.get(init_url)
+            response_json = json.loads(init.text)
+            report_guid = response_json["report"]["guid"]
+        except:
+            print " [-] error initing MG report"
+            company_data["mg"] = "error initing MG report"
 
-    while True:
-        partial_url = "http://marketing.grader.com/report/partial/%s" % (report_guid)
-        partial = requests.get(partial_url)
+    if not company_data.get("mg", False): # if we haven't already hit an error, try fetching the partial report
+        while True:
+            partial_url = "http://marketing.grader.com/report/partial/%s" % (report_guid)
+            partial = requests.get(partial_url)
 
-        response_json = json.loads(partial.text)
-        if response_json["success"] == True and response_json["report"]["finished"]:
-            company_data["mg"] = response_json["report"]["finalGrade"]
-            print " [x] Got final score for %s" % company_data["name"]
-            break
-        else:
-            time.sleep(1) # wait and try polling the API again
-            print " [-] Not ready yet, trying again"
+            response_json = json.loads(partial.text)
+            if response_json["success"] == True and response_json["report"]["finished"]:
+                try:
+                    company_data["mg"] = response_json["report"]["finalGrade"]
+                    print " [x] Got final score for %s" % company_data["name"]
+                    break
+                except KeyError:
+                    company_data["mg"] = "malformed final grade"
+                    print " [x] Error getting final score for %s" % company_data["name"]
+                    break
+            else:
+                time.sleep(1) # wait and try polling the API again
+                print " [-] Not ready yet, trying again"
             
     to_send = json.dumps(company_data)
     ch.basic_ack(delivery_tag = method.delivery_tag)
@@ -153,21 +167,24 @@ def write_data(ch, method, properties, body):
     
     c = json.loads(body)
     print " [x] Received %r" % (c["name"])
+    c["name"] = c["name"].encode("utf-8", errors="ignore")
     
     with open('log.txt', 'a') as f:
-        str = "%s. %s\t%s\t%s\n" % (c["rank"], c["name"], c["url"], c["mg"])
+        str = "%s. %s\t%s\t%s\n" % (c.get("rank"), c.get("name"), c.get("url"), c.get("mg"))
         f.write(str)
     
     ch.basic_ack(delivery_tag = method.delivery_tag)
     
 if __name__ == "__main__":
 
-    if len(sys.argv) > 1:
-        if sys.argv[1] == "url":
+    if len( sys.argv ) > 1:
+        if sys.argv[1] == "url": # requesting a URL worker
             worker("url")
-        elif sys.argv[1] == "mg":
+        elif sys.argv[1] == "mg": # requesting a Marketing Grader worker
             worker("mg")
-        elif sys.argv[1] == "write":
+        elif sys.argv[1] == "write": # requesting a "write to file" worker
             worker("write")
-    else:
-        main(demo=False)
+        elif sys.argv[1] == "full": # start the process with the entire data set
+            main(full=True)
+    else: # start the process with a tiny subset of data
+        main()
