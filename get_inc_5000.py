@@ -58,14 +58,12 @@ def get_company_name_and_rank(limit=100, pages=51):
     """ return a list of all the fortune 5000 fastest growing comapnies """ 
     companies = []
 
-    # some hacking for the weird URL params they use
-    years = ["x"] 
-    for number in range(1, 51):
-        years.append(str(number) + "00")
+    # the list has 50 pages of 100 companies each, plus one page of the last company
+    segments = range(0, 5001, 100) 
         
-    for year in years[:pages]:
+    for offset in segments[:pages]:
         
-        r = requests.get("http://www.inc.com/inc5000/list/2012/%s/" % (year))
+        r = requests.get("http://www.inc.com/inc5000/list/2012/%s/" % (offset))
         soup = BeautifulSoup(r.text)
         table = soup.find(id="fulltable")
         rows = soup.findAll("tr")[2:] # skip the first 2 rows, which are headers
