@@ -95,7 +95,7 @@ def get_url_for_company_name(ch, method, properties, body):
     r = requests.get(company_profile_url)
     soup = BeautifulSoup(r.text)
 
-    detail_section = soup.find("div", "companydetail")
+    detail_section = soup.find("div", "inc5000companydata")
     try:
         company_url = detail_section.find("a")["href"]
     except:
