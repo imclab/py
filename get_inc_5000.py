@@ -9,6 +9,8 @@ import json as json
 import time
 import sys
 
+import codecs
+
 EXCHANGE_NAME = 'process500'
 
 def main(full=False):
@@ -165,9 +167,8 @@ def write_data(ch, method, properties, body):
     
     c = json.loads(body)
     print " [x] Received %r" % (c["name"])
-    c["name"] = c["name"].encode("utf-8", errors="ignore")
     
-    with open('log.txt', 'a') as f:
+    with codecs.open('log.txt', 'a', 'utf-8') as f:
         str = "%s. %s\t%s\t%s\n" % (c.get("rank"), c.get("name"), c.get("url"), c.get("mg"))
         f.write(str)
     
