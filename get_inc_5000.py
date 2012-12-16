@@ -9,6 +9,8 @@ import json as json
 import time
 import sys
 
+import codecs
+
 EXCHANGE_NAME = 'process500'
 
 def main(full=False):
@@ -58,14 +60,12 @@ def get_company_name_and_rank(limit=100, pages=51):
     """ return a list of all the fortune 5000 fastest growing comapnies """ 
     companies = []
 
-    # some hacking for the weird URL params they use
-    years = ["x"] 
-    for number in range(1, 51):
-        years.append(str(number) + "00")
+    # the list has 50 pages of 100 companies each, plus one page of the last company
+    segments = range(0, 5001, 100) 
         
-    for year in years[:pages]:
+    for offset in segments[:pages]:
         
-        r = requests.get("http://www.inc.com/inc5000/list/2012/%s/" % (year))
+        r = requests.get("http://www.inc.com/inc5000/list/2012/%s/" % (offset))
         soup = BeautifulSoup(r.text)
         table = soup.find(id="fulltable")
         rows = soup.findAll("tr")[2:] # skip the first 2 rows, which are headers
@@ -95,7 +95,7 @@ def get_url_for_company_name(ch, method, properties, body):
     r = requests.get(company_profile_url)
     soup = BeautifulSoup(r.text)
 
-    detail_section = soup.find("div", "companydetail")
+    detail_section = soup.find("div", "inc5000companydata")
     try:
         company_url = detail_section.find("a")["href"]
     except:
@@ -167,9 +167,8 @@ def write_data(ch, method, properties, body):
     
     c = json.loads(body)
     print " [x] Received %r" % (c["name"])
-    c["name"] = c["name"].encode("utf-8", errors="ignore")
     
-    with open('log.txt', 'a') as f:
+    with codecs.open('log.txt', 'a', 'utf-8') as f:
         str = "%s. %s\t%s\t%s\n" % (c.get("rank"), c.get("name"), c.get("url"), c.get("mg"))
         f.write(str)
     
