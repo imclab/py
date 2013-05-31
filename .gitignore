@@ -2,6 +2,7 @@
 *.txt
 *.log
 *.jpg
+*.csv
 
 #specific files
 scrape.py
