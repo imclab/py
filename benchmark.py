@@ -3,6 +3,7 @@ import csv
 from random import choice
 from datetime import datetime
 from collections import defaultdict
+from BeautifulSoup import BeautifulSoup
 
 import eventlet
 requests = eventlet.import_patched('requests')
@@ -84,8 +85,23 @@ IP_ADDRESSES = [
     "118.99.126.162",
     "118.175.88.45",
     "159.255.166.29",
-    "95.65.58.61",
-    "118.96.121.17",
+    "195.165.58.61",
+    "118.196.121.17",
+    "220.422.125.226",
+    "116.131.232.246",
+    "120.258.129.184",
+    "191.905.146.196",
+    "215.130.118.193",
+    "198.154.114.100",
+    "190.195.199.243",
+    "183.160.126.184",
+    "123.103.223.106",
+    "110.177.226.216",
+    "118.199.126.162",
+    "118.175.188.245",
+    "159.255.166.129",
+    "195.165.158.161",
+    "118.196.121.179",
 ]
 
 PROXIES = [
@@ -158,6 +174,9 @@ def fetch(url):
         start = datetime.now()
         r = requests.get(url, headers=headers)
         end = datetime.now()
+
+        # soup = BeautifulSoup(r.text)
+        # print soup.find("title")
 
         # how long did it take?
         diff = end - start
