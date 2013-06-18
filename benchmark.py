@@ -12,8 +12,8 @@ import eventlet
 requests = eventlet.import_patched('requests')
 time = eventlet.import_patched('time')
 
-NUM_REQUESTS = 2
-CONCURRENT_REQUESTS = 1
+NUM_REQUESTS = 2000
+CONCURRENT_REQUESTS = 50
 USER_AGENTS = [
     "Mozilla/5.0 (X11; Linux x86_64; rv:12.0) Gecko/20100101 Firefox/21.0",
     "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1468.0 Safari/537.36",
@@ -82,7 +82,7 @@ def get_ip():
     )
 
 
-def connect(host):
+def connect_socket(host):
 
     if host.startswith("http://"):
         host = host[7:]
@@ -96,7 +96,7 @@ def connect(host):
     s.close()
 
 
-def fetch(url):
+def connect_http(url):
 
     ip_address = get_ip()
     try:
@@ -114,7 +114,7 @@ def fetch(url):
         end = datetime.now()
 
         soup = BeautifulSoup(r.text)
-        print soup.find("title").text
+        # print soup.find("title").text
 
         # how long did it take?
         diff = end - start
@@ -133,13 +133,15 @@ def fetch(url):
 
 def main(site):
 
+    started = datetime.now()
+
     pool = eventlet.GreenPool(CONCURRENT_REQUESTS)
     pile = eventlet.GreenPile(pool)
 
     for x in xrange(NUM_REQUESTS):
         # eventlet.spawn(connect, [site])
         # pile.spawn(fetch, site)
-        pile.spawn(connect, site)
+        pile.spawn(connect_http, site)
 
     # now that we've got the data, count it up
     distribution = defaultdict(int)
@@ -158,6 +160,10 @@ def main(site):
             w.writerow([t, v])
 
     print zip(ticks, values)
+    ended = datetime.now()
+    time_elapsed = ended - started
+
+    print "took %ss" % time_elapsed.seconds
 
 if __name__ == "__main__":
     site = sys.argv[1]
