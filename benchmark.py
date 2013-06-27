@@ -113,7 +113,7 @@ def connect_http(url):
         r = requests.get(url, headers=headers)
         end = datetime.now()
 
-        soup = BeautifulSoup(r.text)
+        # soup = BeautifulSoup(r.text)
         # print soup.find("title").text
 
         # how long did it take?
